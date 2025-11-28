@@ -1,0 +1,46 @@
+{
+  "data": {
+    "nodes": [
+      {
+        "id": "!ba649fcc",
+        "long_name": "Rastreador LoRa 1",
+        "short_name": "LoRa1",
+        "position": {
+          "latitude": -27.4514,
+          "longitude": -58.9867,
+          "altitude": 52
+        },
+        "snr": 8.5,
+        "battery": 85,
+        "last_heard": 1732831200
+      },
+      {
+        "id": "!ca749fdd",
+        "long_name": "Rastreador LoRa 2",
+        "short_name": "LoRa2",
+        "position": {
+          "latitude": -27.4650,
+          "longitude": -58.9950,
+          "altitude": 48
+        },
+        "snr": 12.3,
+        "battery": 92,
+        "last_heard": 1732831200
+      },
+      {
+        "id": "!da849fee",
+        "long_name": "GSM Bridge Principal",
+        "short_name": "GSM1",
+        "position": {
+          "latitude": -27.4400,
+          "longitude": -58.9700,
+          "altitude": 55
+        },
+        "snr": 5.2,
+        "battery": 78,
+        "last_heard": 1732831200
+      }
+    ]
+  },
+  "status": "ok"
+}
