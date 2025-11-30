@@ -485,234 +485,418 @@
             <div class="modal-buttons">
                 <button class="btn" id="btnExportCSV">CSV</button>
                 <button class="btn" id="btnExportJSON">JSON</button>
-                <button class="btn" id="btnCancelExport">Cancelar</button>
-            </div>
-        </div>
-    </div>
+                ```
 
-    <script>
-        // ========== CONFIGURACIÓN ==========
-        const CONFIG = {
-            mapCenter: [-27.4514, -58.9867],
-            mapZoom: 6,
-            refreshInterval: 10000,
-            apiEndpoint: '/json/nodes'
-        };
-
-        // ========== ESTADO GLOBAL ==========
-        let map = null;
-        let markers = {};
-        let currentTelemetry = null;
-        let previousSignalType = null;
-        let userLocation = null;
-        let bluetoothDevice = null;
-
-        // ========== INICIALIZACIÓN ==========
-        document.addEventListener('DOMContentLoaded', () => {
-            initMap();
-            initUI();
-            initDataLogger();
-            startDataRefresh();
-            requestUserLocation();
-        });
-
-        // ========== MAPA ==========
-        function initMap() {
-            map = L.map('map', {
-                zoomControl: true,
-                attributionControl: false
-            }).setView(CONFIG.mapCenter, CONFIG.mapZoom);
-
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19
-            }).addTo(map);
-
-            // Mover controles de zoom para que no estorben
-            L.control.zoom({ position: 'bottomright' }).addTo(map);
-        }
-
-        // ========== UI INTERACTIONS ==========
-        function initUI() {
-            // Toggle telemetría
-            const telemetryBar = document.getElementById('telemetryBar');
-            const telemetryToggle = document.getElementById('telemetryToggle');
-            const mapContainer = document.getElementById('mapContainer');
-
-            telemetryToggle.addEventListener('click', () => {
-                telemetryBar.classList.toggle('collapsed');
-                telemetryBar.classList.toggle('expanded');
-
-                if (telemetryBar.classList.contains('expanded')) {
-                    mapContainer.className = 'map-container with-telemetry-expanded';
-                } else {
-                    mapContainer.className = 'map-container with-telemetry-collapsed';
+                .node-badge.gsm {
+                background: #f093fb;
                 }
 
-                setTimeout(() => map.invalidateSize(), 300);
-            });
+                .node-info {
+                font-size: 13px;
+                line-height: 1.8;
+                opacity: 0.9;
+                }
 
-            // Toggle nodes sheet
-            const nodesSheet = document.getElementById('nodesSheet');
-            const sheetHandle = document.getElementById('sheetHandle');
+                .node-info strong {
+                color: #667eea;
+                }
 
-            sheetHandle.addEventListener('click', () => {
-                nodesSheet.classList.toggle('minimized');
-                nodesSheet.classList.toggle('expanded');
-            });
+                /* Iconos personalizados Leaflet */
+                .custom-icon {
+                width: 36px;
+                height: 36px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 50%;
+                font-weight: 700;
+                font-size: 18px;
+                color: white;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+                }
 
-            // Botones header
-            document.getElementById('btnBluetooth').addEventListener('click', openBluetoothModal);
-            document.getElementById('btnExport').addEventListener('click', openExportModal);
-            document.getElementById('btnRefresh').addEventListener('click', refreshData);
+                .icon-lora {
+                background: #667eea;
+                }
 
-            // Modal Bluetooth
-            document.getElementById('btnConnectBT').addEventListener('click', connectBluetooth);
-            document.getElementById('btnCancelBT').addEventListener('click', () => {
-                document.getElementById('bluetoothModal').classList.remove('active');
-            });
+                .icon-gsm {
+                background: #f093fb;
+                }
 
-            // Modal Export
-            document.getElementById('btnExportCSV').addEventListener('click', () => exportData('csv'));
-            document.getElementById('btnExportJSON').addEventListener('click', () => exportData('json'));
-            document.getElementById('btnCancelExport').addEventListener('click', () => {
-                document.getElementById('exportModal').classList.remove('active');
-            });
-        }
+                /* Loading */
+                .loading {
+                text-align: center;
+                padding: 20px;
+                opacity: 0.7;
+                }
 
-        // ========== DATA FETCHING ==========
-        async function fetchNodes() {
-            try {
-                const response = await fetch(CONFIG.apiEndpoint);
-                const data = await response.json();
-                return data.data.nodes || [];
-            } catch (error) {
-                console.error('Error fetching nodes:', error);
-                return [];
-            }
-        }
+                /* Modal de Bluetooth */
+                .modal {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0, 0, 0, 0.8);
+                z-index: 2000;
+                align-items: center;
+                justify-content: center;
+                }
 
-        async function refreshData() {
-            const nodes = await fetchNodes();
-            updateMap(nodes);
-            updateTelemetry(nodes);
-            updateNodesList(nodes);
-        }
+                .modal.active {
+                display: flex;
+                }
 
-        function startDataRefresh() {
-            refreshData();
-            setInterval(refreshData, CONFIG.refreshInterval);
-        }
+                .modal-content {
+                background: #16213e;
+                border-radius: 16px;
+                padding: 24px;
+                max-width: 90%;
+                width: 400px;
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+                }
 
-        // ========== MAP UPDATE ==========
-        function updateMap(nodes) {
-            // Limpiar marcadores antiguos
-            Object.values(markers).forEach(marker => map.removeLayer(marker));
-            markers = {};
+                .modal-title {
+                font-size: 20px;
+                font-weight: 700;
+                margin-bottom: 16px;
+                }
 
-            nodes.forEach(node => {
-                if (node.position && node.position.latitude && node.position.longitude) {
-                    const isGSM = node.long_name && node.long_name.includes('GSM');
+                .modal-buttons {
+                display: flex;
+                gap: 12px;
+                margin-top: 20px;
+                }
 
-                    const icon = L.divIcon({
-                        html: `<div class="custom-icon ${isGSM ? 'icon-gsm' : 'icon-lora'}">${isGSM ? 'G' : 'L'}</div>`,
-                        className: '',
-                        iconSize: [36, 36],
-                        iconAnchor: [18, 36],
-                        popupAnchor: [0, -36]
-                    });
+                .modal-buttons .btn {
+                flex: 1;
+                }
 
-                    const marker = L.marker(
-                        [node.position.latitude, node.position.longitude],
-                        { icon: icon }
-                    ).addTo(map);
+                /* Responsive */
+                @media (min-width: 768px) {
+                .header h1 {
+                font-size: 22px;
+                }
 
-                    marker.bindPopup(`
+                .nodes-sheet {
+                right: auto;
+                width: 380px;
+                max-height: calc(100vh - 54px);
+                border-radius: 0;
+                }
+
+                .nodes-sheet.minimized {
+                transform: translateX(0);
+                }
+
+                .sheet-handle {
+                display: none;
+                }
+                }
+                </style>
+                </head>
+
+                <body>
+                    <!-- Header -->
+                    <div class="header">
+                        <h1>🛰️ Rastreador GPS</h1>
+                        <div class="header-buttons">
+                            <button class="btn" id="btnBluetooth" title="Conectar Bluetooth">📡</button>
+                            <button class="btn" id="btnExport" title="Exportar Datos">💾</button>
+                            <button class="btn" id="btnRefresh" title="Actualizar">🔄</button>
+                        </div>
+                    </div>
+
+                    <!-- Barra de Telemetría Colapsable -->
+                    <div class="telemetry-bar collapsed" id="telemetryBar">
+                        <div class="telemetry-toggle" id="telemetryToggle">
+                            <span>▼</span>
+                        </div>
+                        <div class="telemetry-content">
+                            <div class="telemetry-item" id="telemetrySignal">
+                                <div class="telemetry-label">Señal</div>
+                                <div class="telemetry-value">
+                                    <span class="telemetry-icon">📶</span>
+                                    <span id="signalType">--</span>
+                                </div>
+                            </div>
+                            <div class="telemetry-item">
+                                <div class="telemetry-label">Potencia</div>
+                                <div class="telemetry-value">
+                                    <span id="signalStrength">-- dBm</span>
+                                </div>
+                            </div>
+                            <div class="telemetry-item">
+                                <div class="telemetry-label">Batería</div>
+                                <div class="telemetry-value">
+                                    <span class="telemetry-icon">🔋</span>
+                                    <span id="batteryLevel">--%</span>
+                                </div>
+                            </div>
+                            <div class="telemetry-item">
+                                <div class="telemetry-label">Distancia</div>
+                                <div class="telemetry-value">
+                                    <span class="telemetry-icon">📏</span>
+                                    <span id="distance">-- m</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mapa -->
+                    <div class="map-container with-telemetry-collapsed" id="mapContainer">
+                        <div id="map"></div>
+                    </div>
+
+                    <!-- Bottom Sheet de Nodos -->
+                    <div class="nodes-sheet minimized" id="nodesSheet">
+                        <div class="sheet-handle" id="sheetHandle"></div>
+                        <div class="sheet-header">
+                            <h2>📡 Nodos Activos</h2>
+                            <div class="node-count" id="nodeCount">0</div>
+                        </div>
+                        <div class="nodes-list" id="nodesList">
+                            <div class="loading">Cargando nodos...</div>
+                        </div>
+                    </div>
+
+                    <!-- Modal Bluetooth -->
+                    <div class="modal" id="bluetoothModal">
+                        <div class="modal-content">
+                            <div class="modal-title">Conectar Dispositivo</div>
+                            <p id="bluetoothStatus">Presiona conectar para buscar dispositivos Bluetooth cercanos.</p>
+                            <div class="modal-buttons">
+                                <button class="btn" id="btnConnectBT">Conectar</button>
+                                <button class="btn" id="btnCancelBT">Cancelar</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Modal Exportar -->
+                    <div class="modal" id="exportModal">
+                        <div class="modal-content">
+                            <div class="modal-title">Exportar Datos</div>
+                            <p>Selecciona el formato de exportación:</p>
+                            <div class="modal-buttons">
+                                <button class="btn" id="btnExportCSV">CSV</button>
+                                <button class="btn" id="btnExportJSON">JSON</button>
+                                <button class="btn" id="btnCancelExport">Cancelar</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <script>
+                        // ========== CONFIGURACIÓN ==========
+                        const CONFIG = {
+                            mapCenter: [-27.4514, -58.9867],
+                            mapZoom: 6,
+                            refreshInterval: 10000,
+                            apiEndpoint: '/json/nodes'
+                        };
+
+                        // ========== CONSTANTES BLE ==========
+                        const MESH_SERVICE_UUID = '6ba1b218-15a8-461f-9fa8-5dcae273eafd';
+                        const JSON_NODES_UUID = 'e382570b-6072-4639-aa01-447551066804';
+
+                        // ========== ESTADO GLOBAL ==========
+                        let map = null;
+                        let markers = {};
+                        let currentTelemetry = null;
+                        let previousSignalType = null;
+                        let userLocation = null;
+                        let bluetoothDevice = null;
+                        let db = null;
+
+                        // ========== INICIALIZACIÓN ==========
+                        document.addEventListener('DOMContentLoaded', () => {
+                            initMap();
+                            initUI();
+                            initDataLogger();
+                            requestUserLocation();
+                        });
+
+                        // ========== MAPA ==========
+                        function initMap() {
+                            map = L.map('map', {
+                                zoomControl: true,
+                                attributionControl: false
+                            }).setView(CONFIG.mapCenter, CONFIG.mapZoom);
+
+                            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                                maxZoom: 19
+                            }).addTo(map);
+
+                            L.control.zoom({ position: 'bottomright' }).addTo(map);
+                        }
+
+                        // ========== UI INTERACTIONS ==========
+                        function initUI() {
+                            const telemetryBar = document.getElementById('telemetryBar');
+                            const telemetryToggle = document.getElementById('telemetryToggle');
+                            const mapContainer = document.getElementById('mapContainer');
+
+                            telemetryToggle.addEventListener('click', () => {
+                                telemetryBar.classList.toggle('collapsed');
+                                telemetryBar.classList.toggle('expanded');
+
+                                if (telemetryBar.classList.contains('expanded')) {
+                                    mapContainer.className = 'map-container with-telemetry-expanded';
+                                } else {
+                                    mapContainer.className = 'map-container with-telemetry-collapsed';
+                                }
+
+                                setTimeout(() => map.invalidateSize(), 300);
+                            });
+
+                            const nodesSheet = document.getElementById('nodesSheet');
+                            const sheetHandle = document.getElementById('sheetHandle');
+
+                            sheetHandle.addEventListener('click', () => {
+                                nodesSheet.classList.toggle('minimized');
+                                nodesSheet.classList.toggle('expanded');
+                            });
+
+                            document.getElementById('btnBluetooth').addEventListener('click', openBluetoothModal);
+                            document.getElementById('btnExport').addEventListener('click', openExportModal);
+                            document.getElementById('btnRefresh').addEventListener('click', refreshData);
+
+                            document.getElementById('btnConnectBT').addEventListener('click', connectBluetooth);
+                            document.getElementById('btnCancelBT').addEventListener('click', () => {
+                                document.getElementById('bluetoothModal').classList.remove('active');
+                            });
+
+                            document.getElementById('btnExportCSV').addEventListener('click', () => exportData('csv'));
+                            document.getElementById('btnExportJSON').addEventListener('click', () => exportData('json'));
+                            document.getElementById('btnCancelExport').addEventListener('click', () => {
+                                document.getElementById('exportModal').classList.remove('active');
+                            });
+                        }
+
+                        // ========== DATA FETCHING (Legacy/Fallback) ==========
+                        async function fetchNodes() {
+                            try {
+                                const response = await fetch(CONFIG.apiEndpoint);
+                                const data = await response.json();
+                                return data.data.nodes || [];
+                            } catch (error) {
+                                console.error('Error fetching nodes:', error);
+                                return [];
+                            }
+                        }
+
+                        async function refreshData() {
+                            const nodes = await fetchNodes();
+                            if (nodes.length > 0) {
+                                updateMap(nodes);
+                                updateTelemetry(nodes);
+                                updateNodesList(nodes);
+                            }
+                        }
+
+                        // ========== MAP UPDATE ==========
+                        function updateMap(nodes) {
+                            Object.values(markers).forEach(marker => map.removeLayer(marker));
+                            markers = {};
+
+                            nodes.forEach(node => {
+                                if (node.position && node.position.latitude && node.position.longitude) {
+                                    const isGSM = node.long_name && node.long_name.includes('GSM');
+
+                                    const icon = L.divIcon({
+                                        html: `<div class="custom-icon ${isGSM ? 'icon-gsm' : 'icon-lora'}">${isGSM ? 'G' : 'L'}</div>`,
+                                        className: '',
+                                        iconSize: [36, 36],
+                                        iconAnchor: [18, 36],
+                                        popupAnchor: [0, -36]
+                                    });
+
+                                    const marker = L.marker(
+                                        [node.position.latitude, node.position.longitude],
+                                        { icon: icon }
+                                    ).addTo(map);
+
+                                    marker.bindPopup(`
                         <div style="color: #333;">
                             <h3 style="margin: 0 0 10px 0;">${node.long_name || node.short_name}</h3>
                             <p style="margin: 5px 0;"><strong>Tipo:</strong> ${isGSM ? 'GSM Bridge' : 'LoRa'}</p>
                             <p style="margin: 5px 0;"><strong>ID:</strong> ${node.id}</p>
                             <p style="margin: 5px 0;"><strong>Altitud:</strong> ${node.position.altitude}m</p>
                             ${node.snr ? `<p style="margin: 5px 0;"><strong>SNR:</strong> ${node.snr} dB</p>` : ''}
+                            ${node.battery ? `<p style="margin: 5px 0;"><strong>Batería:</strong> ${node.battery}%</p>` : ''}
                         </div>
                     `);
 
-                    markers[node.id] = marker;
-                }
-            });
+                                    markers[node.id] = marker;
+                                }
+                            });
 
-            // Ajustar vista si hay marcadores
-            if (Object.keys(markers).length > 0) {
-                const group = L.featureGroup(Object.values(markers));
-                map.fitBounds(group.getBounds().pad(0.1));
-            }
-        }
+                            if (Object.keys(markers).length > 0) {
+                                const group = L.featureGroup(Object.values(markers));
+                                map.fitBounds(group.getBounds().pad(0.1));
+                            }
+                        }
 
-        // ========== TELEMETRY UPDATE ==========
-        function updateTelemetry(nodes) {
-            if (nodes.length === 0) return;
+                        // ========== TELEMETRY UPDATE ==========
+                        function updateTelemetry(nodes) {
+                            if (nodes.length === 0) return;
 
-            // Usar el primer nodo como referencia (ajustar según necesidad)
-            const primaryNode = nodes[0];
-            const isGSM = primaryNode.long_name && primaryNode.long_name.includes('GSM');
-            const signalType = isGSM ? 'GSM' : 'LoRa';
+                            const primaryNode = nodes[0];
+                            const isGSM = primaryNode.long_name && primaryNode.long_name.includes('GSM');
+                            const signalType = isGSM ? 'GSM' : 'LoRa';
 
-            // Detectar cambio de señal
-            if (previousSignalType && previousSignalType !== signalType) {
-                logSignalChange(previousSignalType, signalType, primaryNode);
-            }
-            previousSignalType = signalType;
+                            if (previousSignalType && previousSignalType !== signalType) {
+                                logSignalChange(previousSignalType, signalType, primaryNode);
+                            }
+                            previousSignalType = signalType;
 
-            // Actualizar UI
-            document.getElementById('signalType').textContent = signalType;
-            document.getElementById('signalStrength').textContent =
-                primaryNode.snr ? `${primaryNode.snr} dBm` : '-- dBm';
+                            document.getElementById('signalType').textContent = signalType;
+                            document.getElementById('signalStrength').textContent =
+                                primaryNode.snr ? `${primaryNode.snr} dBm` : '-- dBm';
 
-            // Batería (si existe en los datos)
-            if (primaryNode.battery) {
-                document.getElementById('batteryLevel').textContent = `${primaryNode.battery}%`;
-            }
+                            if (primaryNode.battery) {
+                                document.getElementById('batteryLevel').textContent = `${primaryNode.battery}%`;
+                            }
 
-            // Distancia (calcular si tenemos ubicación del usuario)
-            if (userLocation && primaryNode.position) {
-                const distance = calculateDistance(
-                    userLocation.latitude,
-                    userLocation.longitude,
-                    primaryNode.position.latitude,
-                    primaryNode.position.longitude
-                );
-                document.getElementById('distance').textContent = formatDistance(distance);
-            }
+                            if (userLocation && primaryNode.position) {
+                                const distance = calculateDistance(
+                                    userLocation.latitude,
+                                    userLocation.longitude,
+                                    primaryNode.position.latitude,
+                                    primaryNode.position.longitude
+                                );
+                                document.getElementById('distance').textContent = formatDistance(distance);
+                            }
 
-            // Cambiar color de telemetría según tipo
-            const telemetrySignal = document.getElementById('telemetrySignal');
-            if (isGSM) {
-                telemetrySignal.classList.add('gsm');
-            } else {
-                telemetrySignal.classList.remove('gsm');
-            }
+                            const telemetrySignal = document.getElementById('telemetrySignal');
+                            if (isGSM) {
+                                telemetrySignal.classList.add('gsm');
+                            } else {
+                                telemetrySignal.classList.remove('gsm');
+                            }
 
-            currentTelemetry = { ...primaryNode, signalType, timestamp: Date.now() };
-        }
+                            currentTelemetry = { ...primaryNode, signalType, timestamp: Date.now() };
+                        }
 
-        // ========== NODES LIST UPDATE ==========
-        function updateNodesList(nodes) {
-            const nodesList = document.getElementById('nodesList');
-            const nodeCount = document.getElementById('nodeCount');
+                        // ========== NODES LIST UPDATE ==========
+                        function updateNodesList(nodes) {
+                            const nodesList = document.getElementById('nodesList');
+                            const nodeCount = document.getElementById('nodeCount');
 
-            nodeCount.textContent = nodes.length;
-            nodesList.innerHTML = '';
+                            nodeCount.textContent = nodes.length;
+                            nodesList.innerHTML = '';
 
-            if (nodes.length === 0) {
-                nodesList.innerHTML = '<div class="loading">No hay nodos disponibles</div>';
-                return;
-            }
+                            if (nodes.length === 0) {
+                                nodesList.innerHTML = '<div class="loading">No hay nodos disponibles</div>';
+                                return;
+                            }
 
-            nodes.forEach(node => {
-                const isGSM = node.long_name && node.long_name.includes('GSM');
+                            nodes.forEach(node => {
+                                const isGSM = node.long_name && node.long_name.includes('GSM');
 
-                const card = document.createElement('div');
-                card.className = `node-card ${isGSM ? 'gsm' : ''}`;
-                card.innerHTML = `
+                                const card = document.createElement('div');
+                                card.className = `node-card ${isGSM ? 'gsm' : ''}`;
+                                card.innerHTML = `
                     <div class="node-header">
                         <div class="node-name">
                             <span class="status-indicator"></span>
@@ -728,217 +912,263 @@
                             <div><strong>Alt:</strong> ${node.position.altitude}m</div>
                         ` : '<div style="opacity: 0.6;">Sin posición GPS</div>'}
                         ${node.snr ? `<div><strong>SNR:</strong> ${node.snr} dB</div>` : ''}
+                        ${node.battery ? `<div><strong>Bat:</strong> ${node.battery}%</div>` : ''}
                     </div>
                 `;
 
-                nodesList.appendChild(card);
-            });
-        }
+                                nodesList.appendChild(card);
+                            });
+                        }
 
-        // ========== BLUETOOTH ==========
-        function openBluetoothModal() {
-            document.getElementById('bluetoothModal').classList.add('active');
-        }
+                        // ========== BLUETOOTH ==========
+                        function openBluetoothModal() {
+                            document.getElementById('bluetoothModal').classList.add('active');
+                        }
 
-        async function connectBluetooth() {
-            const statusEl = document.getElementById('bluetoothStatus');
+                        async function connectBluetooth() {
+                            const statusEl = document.getElementById('bluetoothStatus');
 
-            if (!navigator.bluetooth) {
-                statusEl.textContent = 'Bluetooth no disponible en este navegador.';
-                return;
-            }
+                            if (!navigator.bluetooth) {
+                                statusEl.textContent = 'Bluetooth no disponible en este navegador.';
+                                return;
+                            }
 
-            try {
-                statusEl.textContent = 'Buscando dispositivos...';
+                            try {
+                                statusEl.textContent = 'Buscando dispositivos...';
 
-                const device = await navigator.bluetooth.requestDevice({
-                    acceptAllDevices: true,
-                    optionalServices: ['battery_service']
-                });
+                                const device = await navigator.bluetooth.requestDevice({
+                                    filters: [{ namePrefix: 'Meshtastic' }],
+                                    optionalServices: [MESH_SERVICE_UUID, 'battery_service']
+                                });
 
-                bluetoothDevice = device;
-                statusEl.textContent = `Conectado a: ${device.name}`;
+                                bluetoothDevice = device;
+                                statusEl.textContent = `Conectando a: ${device.name}...`;
 
-                // Aquí implementarías la lógica de recepción de datos
-                // según el protocolo específico de tu dispositivo
+                                device.addEventListener('gattserverdisconnected', onDisconnected);
 
-                setTimeout(() => {
-                    document.getElementById('bluetoothModal').classList.remove('active');
-                }, 2000);
+                                const server = await device.gatt.connect();
+                                statusEl.textContent = 'Obteniendo servicio...';
 
-            } catch (error) {
-                console.error('Error Bluetooth:', error);
-                statusEl.textContent = `Error: ${error.message}`;
-            }
-        }
+                                const service = await server.getPrimaryService(MESH_SERVICE_UUID);
+                                statusEl.textContent = 'Obteniendo característica...';
 
-        // ========== DATA LOGGER ==========
-        let db = null;
+                                const characteristic = await service.getCharacteristic(JSON_NODES_UUID);
 
-        function initDataLogger() {
-            const request = indexedDB.open('RastreadorDB', 1);
+                                await characteristic.startNotifications();
+                                statusEl.textContent = '¡Conectado! Esperando datos...';
 
-            request.onerror = () => {
-                console.error('Error al abrir IndexedDB');
-            };
+                                characteristic.addEventListener('characteristicvaluechanged', handleJsonData);
 
-            request.onsuccess = (event) => {
-                db = event.target.result;
-            };
+                                // Intentar leer valor inicial
+                                try {
+                                    const value = await characteristic.readValue();
+                                    handleJsonData({ target: { value: value } });
+                                } catch (e) {
+                                    console.log('No se pudo leer valor inicial, esperando notificación...');
+                                }
 
-            request.onupgradeneeded = (event) => {
-                const db = event.target.result;
+                                setTimeout(() => {
+                                    document.getElementById('bluetoothModal').classList.remove('active');
+                                }, 2000);
 
-                // Tabla de eventos de cambio de señal
-                if (!db.objectStoreNames.contains('signalChanges')) {
-                    const signalStore = db.createObjectStore('signalChanges', {
-                        keyPath: 'id',
-                        autoIncrement: true
-                    });
-                    signalStore.createIndex('timestamp', 'timestamp', { unique: false });
-                }
+                            } catch (error) {
+                                console.error('Error Bluetooth:', error);
+                                statusEl.textContent = `Error: ${error.message}`;
+                            }
+                        }
 
-                // Tabla de telemetría general
-                if (!db.objectStoreNames.contains('telemetry')) {
-                    const telemetryStore = db.createObjectStore('telemetry', {
-                        keyPath: 'id',
-                        autoIncrement: true
-                    });
-                    telemetryStore.createIndex('timestamp', 'timestamp', { unique: false });
-                }
-            };
-        }
+                        function handleJsonData(event) {
+                            const value = event.target.value;
+                            const decoder = new TextDecoder('utf-8');
+                            const jsonString = decoder.decode(value);
 
-        function logSignalChange(fromType, toType, nodeData) {
-            if (!db) return;
+                            try {
+                                const cleanString = jsonString.replace(/\0/g, '');
+                                const data = JSON.parse(cleanString);
+                                console.log('Datos recibidos por BLE:', data);
 
-            const transaction = db.transaction(['signalChanges'], 'readwrite');
-            const store = transaction.objectStore('signalChanges');
+                                if (data.data && data.data.nodes) {
+                                    updateMap(data.data.nodes);
+                                    updateTelemetry(data.data.nodes);
+                                    updateNodesList(data.data.nodes);
+                                    document.getElementById('bluetoothStatus').textContent = `Datos recibidos: ${new Date().toLocaleTimeString()}`;
+                                }
+                            } catch (e) {
+                                console.error('Error parseando JSON BLE:', e);
+                            }
+                        }
 
-            const record = {
-                timestamp: Date.now(),
-                fromSignalType: fromType,
-                toSignalType: toType,
-                nodeData: { ...nodeData }
-            };
+                        function onDisconnected(event) {
+                            const device = event.target;
+                            console.log(`Dispositivo ${device.name} desconectado`);
+                            const statusEl = document.getElementById('bluetoothStatus');
+                            if (statusEl) statusEl.textContent = 'Desconectado';
+                            alert('Dispositivo Bluetooth desconectado');
+                        }
 
-            store.add(record);
+                        // ========== DATA LOGGER ==========
+                        function initDataLogger() {
+                            const request = indexedDB.open('RastreadorDB', 1);
 
-            console.log('📡 Cambio de señal registrado:', fromType, '→', toType);
+                            request.onerror = () => {
+                                console.error('Error al abrir IndexedDB');
+                            };
 
-            // Vibración si está disponible
-            if (navigator.vibrate) {
-                navigator.vibrate(200);
-            }
-        }
+                            request.onsuccess = (event) => {
+                                db = event.target.result;
+                            };
 
-        // ========== EXPORT DATA ==========
-        function openExportModal() {
-            document.getElementById('exportModal').classList.add('active');
-        }
+                            request.onupgradeneeded = (event) => {
+                                const db = event.target.result;
 
-        async function exportData(format) {
-            if (!db) {
-                alert('Base de datos no disponible');
-                return;
-            }
+                                if (!db.objectStoreNames.contains('signalChanges')) {
+                                    const signalStore = db.createObjectStore('signalChanges', {
+                                        keyPath: 'id',
+                                        autoIncrement: true
+                                    });
+                                    signalStore.createIndex('timestamp', 'timestamp', { unique: false });
+                                }
 
-            const transaction = db.transaction(['signalChanges'], 'readonly');
-            const store = transaction.objectStore('signalChanges');
-            const request = store.getAll();
+                                if (!db.objectStoreNames.contains('telemetry')) {
+                                    const telemetryStore = db.createObjectStore('telemetry', {
+                                        keyPath: 'id',
+                                        autoIncrement: true
+                                    });
+                                    telemetryStore.createIndex('timestamp', 'timestamp', { unique: false });
+                                }
+                            };
+                        }
 
-            request.onsuccess = () => {
-                const data = request.result;
+                        function logSignalChange(fromType, toType, nodeData) {
+                            if (!db) return;
 
-                if (format === 'csv') {
-                    exportToCSV(data);
-                } else {
-                    exportToJSON(data);
-                }
+                            const transaction = db.transaction(['signalChanges'], 'readwrite');
+                            const store = transaction.objectStore('signalChanges');
 
-                document.getElementById('exportModal').classList.remove('active');
-            };
-        }
+                            const record = {
+                                timestamp: Date.now(),
+                                fromSignalType: fromType,
+                                toSignalType: toType,
+                                nodeData: { ...nodeData }
+                            };
 
-        function exportToCSV(data) {
-            const headers = ['Timestamp', 'Fecha', 'De', 'A', 'Latitud', 'Longitud', 'SNR', 'Batería'];
-            const rows = data.map(record => {
-                const date = new Date(record.timestamp);
-                return [
-                    record.timestamp,
-                    date.toLocaleString('es-AR'),
-                    record.fromSignalType,
-                    record.toSignalType,
-                    record.nodeData.position?.latitude || '',
-                    record.nodeData.position?.longitude || '',
-                    record.nodeData.snr || '',
-                    record.nodeData.battery || ''
-                ];
-            });
+                            store.add(record);
 
-            const csv = [headers, ...rows]
-                .map(row => row.join(','))
-                .join('\n');
+                            console.log('📡 Cambio de señal registrado:', fromType, '→', toType);
 
-            downloadFile(csv, 'rastreador-datos.csv', 'text/csv');
-        }
+                            if (navigator.vibrate) {
+                                navigator.vibrate(200);
+                            }
+                        }
 
-        function exportToJSON(data) {
-            const json = JSON.stringify(data, null, 2);
-            downloadFile(json, 'rastreador-datos.json', 'application/json');
-        }
+                        // ========== EXPORT DATA ==========
+                        function openExportModal() {
+                            document.getElementById('exportModal').classList.add('active');
+                        }
 
-        function downloadFile(content, filename, mimeType) {
-            const blob = new Blob([content], { type: mimeType });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            a.click();
-            URL.revokeObjectURL(url);
-        }
+                        async function exportData(format) {
+                            if (!db) {
+                                alert('Base de datos no disponible');
+                                return;
+                            }
 
-        // ========== GEOLOCATION ==========
-        function requestUserLocation() {
-            if (navigator.geolocation) {
-                navigator.geolocation.watchPosition(
-                    (position) => {
-                        userLocation = {
-                            latitude: position.coords.latitude,
-                            longitude: position.coords.longitude
-                        };
-                    },
-                    (error) => {
-                        console.log('Geolocalización no disponible:', error);
-                    }
-                );
-            }
-        }
+                            const transaction = db.transaction(['signalChanges'], 'readonly');
+                            const store = transaction.objectStore('signalChanges');
+                            const request = store.getAll();
 
-        // ========== UTILITIES ==========
-        function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371e3; // Radio de la Tierra en metros
-            const φ1 = lat1 * Math.PI / 180;
-            const φ2 = lat2 * Math.PI / 180;
-            const Δφ = (lat2 - lat1) * Math.PI / 180;
-            const Δλ = (lon2 - lon1) * Math.PI / 180;
+                            request.onsuccess = () => {
+                                const data = request.result;
 
-            const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-                Math.cos(φ1) * Math.cos(φ2) *
-                Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                                if (format === 'csv') {
+                                    exportToCSV(data);
+                                } else {
+                                    exportToJSON(data);
+                                }
 
-            return R * c;
-        }
+                                document.getElementById('exportModal').classList.remove('active');
+                            };
+                        }
 
-        function formatDistance(meters) {
-            if (meters < 1000) {
-                return `${Math.round(meters)} m`;
-            } else {
-                return `${(meters / 1000).toFixed(2)} km`;
-            }
-        }
-    </script>
-</body>
+                        function exportToCSV(data) {
+                            const headers = ['Timestamp', 'Fecha', 'De', 'A', 'Latitud', 'Longitud', 'SNR', 'Batería'];
+                            const rows = data.map(record => {
+                                const date = new Date(record.timestamp);
+                                return [
+                                    record.timestamp,
+                                    date.toLocaleString('es-AR'),
+                                    record.fromSignalType,
+                                    record.toSignalType,
+                                    record.nodeData.position?.latitude || '',
+                                    record.nodeData.position?.longitude || '',
+                                    record.nodeData.snr || '',
+                                    record.nodeData.battery || ''
+                                ];
+                            });
+
+                            const csv = [headers, ...rows]
+                                .map(row => row.join(','))
+                                .join('\n');
+
+                            downloadFile(csv, 'rastreador-datos.csv', 'text/csv');
+                        }
+
+                        function exportToJSON(data) {
+                            const json = JSON.stringify(data, null, 2);
+                            downloadFile(json, 'rastreador-datos.json', 'application/json');
+                        }
+
+                        function downloadFile(content, filename, mimeType) {
+                            const blob = new Blob([content], { type: mimeType });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = filename;
+                            a.click();
+                            URL.revokeObjectURL(url);
+                        }
+
+                        // ========== GEOLOCATION ==========
+                        function requestUserLocation() {
+                            if (navigator.geolocation) {
+                                navigator.geolocation.watchPosition(
+                                    (position) => {
+                                        userLocation = {
+                                            latitude: position.coords.latitude,
+                                            longitude: position.coords.longitude
+                                        };
+                                    },
+                                    (error) => {
+                                        console.log('Geolocalización no disponible:', error);
+                                    }
+                                );
+                            }
+                        }
+
+                        // ========== UTILITIES ==========
+                        function calculateDistance(lat1, lon1, lat2, lon2) {
+                            const R = 6371e3; // Radio de la Tierra en metros
+                            const φ1 = lat1 * Math.PI / 180;
+                            const φ2 = lat2 * Math.PI / 180;
+                            const Δφ = (lat2 - lat1) * Math.PI / 180;
+                            const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+                            const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+                                Math.cos(φ1) * Math.cos(φ2) *
+                                Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+                            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+                            return R * c;
+                        }
+
+                        function formatDistance(meters) {
+                            if (meters < 1000) {
+                                return `${Math.round(meters)} m`;
+                            } else {
+                                return `${(meters / 1000).toFixed(2)} km`;
+                            }
+                        }
+                    </script>
+                </body>
 
 </html>
+```
