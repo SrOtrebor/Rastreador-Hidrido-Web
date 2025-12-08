@@ -1,0 +1,50 @@
+{
+  "packageId": "com.rastreador.gps",
+  "host": "semiacademical-hiedi-weathertight.ngrok-free.dev",
+  "name": "Rastreador GPS Híbrido",
+  "launcherName": "Rastreador",
+  "display": "standalone",
+  "themeColor": "#667EEA",
+  "themeColorDark": "#000000",
+  "navigationColor": "#000000",
+  "navigationColorDark": "#000000",
+  "navigationDividerColor": "#000000",
+  "navigationDividerColorDark": "#000000",
+  "backgroundColor": "#1A1A2E",
+  "enableNotifications": true,
+  "startUrl": "/",
+  "iconUrl": "https://semiacademical-hiedi-weathertight.ngrok-free.dev/icon-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "C:\\Ernesto app\\Nueva carpeta\\Rastreador-Hidrido-Web\\android.keystore",
+    "alias": "rastreador2025"
+  },
+  "appVersionName": "1",
+  "appVersionCode": 1,
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://semiacademical-hiedi-weathertight.ngrok-free.dev/manifest.json",
+  "fallbackType": "customtabs",
+  "features": {
+    "locationDelegation": {
+      "enabled": true
+    }
+  },
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://semiacademical-hiedi-weathertight.ngrok-free.dev/",
+  "minSdkVersion": 21,
+  "orientation": "portrait",
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "protocolHandlers": [],
+  "fileHandlers": [],
+  "launchHandlerClientMode": "",
+  "displayOverride": [],
+  "appVersion": "1"
+}

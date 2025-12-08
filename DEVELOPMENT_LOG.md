@@ -1,6 +1,6 @@
 # Log de Desarrollo - Rastreador GPS Híbrido
 
-## Fecha: 28-29 de Noviembre de 2025
+## Fecha: 28-30 de Noviembre de 2025
 
 ---
 
@@ -27,18 +27,16 @@
 9. ✅ Archivo de datos de prueba creado (`json/nodes`)
 10. ✅ Servidor HTTP local funcionando (Python)
 11. ✅ Repositorio Git configurado
+12. ✅ **Corrección de bugs críticos en `index.html` (Sintaxis y Duplicación)**
+13. ✅ **Mejora en depuración de recepción Bluetooth**
 
 ### En Progreso:
-- ⚠️ **Optimización diseño móvil**: Intentos de reducir tamaños de fuente en telemetría
-  - **Problema**: Archivo `index.html` se corrompe al editar con herramientas automáticas
-  - **Solución temporal**: Restaurado a versión original con `git restore`
-  - **Pendiente**: Aplicar cambios CSS manualmente o con método más robusto
+- ⚠️ **Verificación de visualización de datos SMS**: El firmware ya envía los datos, se está depurando la recepción en la web.
+- ⚠️ **Optimización diseño móvil**: Intentos de reducir tamaños de fuente en telemetría.
 
 ### Pendiente:
-- ❌ Integración con firmware Heltec real
 - ❌ Ajuste de coordenadas GPS (actualmente muestra ubicación incorrecta)
-- ❌ Optimización de tamaños de fuente para móviles
-- ❌ Testing con dispositivos reales en Corrientes
+- ❌ Testing intensivo con dispositivos reales en campo
 
 ---
 
@@ -59,7 +57,7 @@ http://192.168.1.4:8000
 ### Estructura de Archivos
 ```
 pagina-web-custom/
-├── index.html          # Aplicación principal (31,652 bytes)
+├── index.html          # Aplicación principal
 ├── manifest.json       # Configuración PWA
 ├── service-worker.js   # Cache y funcionamiento offline
 ├── README.md          # Documentación completa
@@ -70,9 +68,14 @@ pagina-web-custom/
 
 ---
 
-## 🐛 Problemas Conocidos
+## 🐛 Problemas Conocidos y Soluciones Recientes
 
-### 1. Coordenadas GPS Incorrectas
+### 1. Corrupción del Archivo HTML (Solucionado)
+**Síntoma**: El archivo `index.html` tenía código duplicado y errores de sintaxis masivos.
+**Causa**: Error en herramientas de edición automática que insertaron código en lugar de reemplazarlo correctamente.
+**Solución**: Se realizó una limpieza manual del archivo, eliminando bloques duplicados y cerrando correctamente las funciones JavaScript.
+
+### 2. Coordenadas GPS Incorrectas
 **Síntoma**: Los dispositivos están en Corrientes pero el mapa los muestra en Chaco  
 **Causa Probable**: 
 - Datos de prueba ficticios con coordenadas de Resistencia, Chaco
@@ -84,32 +87,16 @@ pagina-web-custom/
 - Comparar con servidor oficial de Meshtastic
 - Ajustar código en línea 625 de `index.html` si es necesario
 
-### 2. Corrupción del Archivo HTML al Editar
-**Síntoma**: Al usar herramientas de edición automática, el archivo `index.html` se corrompe  
-**Causa**: Problemas con encoding de caracteres especiales en las herramientas de edición  
-**Solución Temporal**: `git restore index.html`  
-**Solución Permanente**: Editar manualmente o usar editor de texto plano
-
 ### 3. Diseño Móvil - Telemetría Muy Grande
 **Síntoma**: En móviles, los datos de telemetría se ven muy grandes y ocupan mucho espacio  
-**Cambios Intentados** (no aplicados por corrupción de archivo):
-```css
-/* Cambios deseados pero no aplicados */
-.telemetry-bar.collapsed { height: 40px; }  /* era 50px */
-.telemetry-bar.expanded { height: 120px; } /* era 140px */
-.telemetry-value { font-size: 14px; }      /* era 20px */
-.telemetry-label { font-size: 9px; }       /* era 11px */
-.telemetry-content { grid-template-columns: repeat(2, 1fr); } /* era auto-fit */
-```
-
-**Archivo Creado**: `mobile-fixes.css` (no enlazado en HTML, no tiene efecto)
+**Estado**: Pendiente de aplicar estilos CSS optimizados.
 
 ---
 
 ## 📡 Integración con Firmware
 
 ### Endpoint Requerido
-El firmware debe exponer: `GET /json/nodes`
+El firmware debe exponer: `GET /json/nodes` o enviar datos vía Bluetooth Notify.
 
 ### Formato de Datos Esperado
 ```json
@@ -139,70 +126,17 @@ El firmware debe exponer: `GET /json/nodes`
 - Si `long_name` contiene "GSM" → Ícono rosa (GSM Bridge)
 - Si no → Ícono morado (LoRa)
 
-### Coordenadas para Corrientes, Argentina
-```
-Latitud:  -27.4689 (sur, negativo)
-Longitud: -58.8344 (oeste, negativo)
-```
-
 ---
 
-## 🎯 Próximos Pasos
+## 📝 Notas Técnicas (Actualización 30/11)
 
-### Prioridad Alta:
-1. **Optimizar diseño móvil**
-   - Aplicar cambios CSS de forma manual
-   - Reducir tamaños de fuente en telemetría
-   - Cambiar grid a 2 columnas fijas
+### Depuración Bluetooth
+Se han añadido logs (`console.log`) en la función `handleJsonData` para capturar:
+1. El string JSON crudo recibido.
+2. El objeto parseado.
+3. La estructura del objeto (si los nodos están en `payload.nodes`, `nodes`, o `data.nodes`).
 
-2. **Corregir coordenadas GPS**
-   - Obtener datos reales del dispositivo Meshtastic
-   - Verificar formato de coordenadas
-   - Ajustar código si latitud/longitud están invertidas
-
-3. **Testing con dispositivos reales**
-   - Conectar dispositivos Heltec
-   - Verificar endpoint `/json/nodes`
-   - Validar visualización en mapa
-
-### Prioridad Media:
-4. Documentar proceso de instalación en Heltec
-5. Configurar HTTPS para funciones avanzadas (Bluetooth, Geolocalización)
-6. Optimizar actualización de datos (actualmente cada 10 segundos)
-
-### Prioridad Baja:
-7. Mejorar diseño de íconos en mapa
-8. Agregar más opciones de exportación
-9. Implementar filtros de nodos
-10. Agregar gráficos de telemetría histórica
-
----
-
-## 📝 Notas Técnicas
-
-### Tecnologías Utilizadas
-- **Frontend**: HTML5, CSS3, JavaScript ES6+
-- **Mapa**: Leaflet.js 1.9.4 con OpenStreetMap
-- **Almacenamiento**: IndexedDB para registro de eventos
-- **APIs**: Web Bluetooth, Geolocation, Service Worker
-- **Servidor Dev**: Python HTTP Server
-
-### Configuración del Mapa
-```javascript
-// Línea 496 en index.html
-const CONFIG = {
-    mapCenter: [-27.4514, -58.9867],  // Centro inicial (Resistencia, Chaco)
-    mapZoom: 6,
-    refreshInterval: 10000,            // 10 segundos
-    apiEndpoint: '/json/nodes'
-};
-```
-
-### Funciones Clave
-- `updateMap(nodes)` - Línea 607: Actualiza marcadores en mapa
-- `updateTelemetry(nodes)` - Línea 651: Actualiza barra de telemetría
-- `fetchNodes()` - Línea 583: Obtiene datos del endpoint
-- `logSignalChange()` - Línea 812: Registra cambios LoRa↔GSM
+Esto es crucial para entender por qué los datos SMS inyectados por el firmware no se estaban visualizando, a pesar de ser enviados.
 
 ---
 
@@ -214,27 +148,5 @@ const CONFIG = {
 
 ---
 
-## 👥 Colaboración entre IAs
-
-**Contexto para próxima IA**:
-Este proyecto está siendo desarrollado con asistencia de múltiples IAs:
-- Una IA trabajando en el firmware de los dispositivos Heltec
-- Otra IA (yo) trabajando en la aplicación web
-- Posiblemente otra IA continuará el desarrollo web
-
-**Archivos de Contexto**:
-- `DEVELOPMENT_LOG.md` (este archivo) - Estado general del proyecto
-- `README.md` - Documentación de usuario
-- `prompt_para_firmware.md` - Especificación para integración con firmware
-
-**Recomendaciones**:
-1. Leer este archivo completo antes de hacer cambios
-2. Actualizar este log después de cambios significativos
-3. Mantener el README.md sincronizado con funcionalidades
-4. Usar `git restore` si el HTML se corrompe
-5. Probar cambios en servidor local antes de commitear
-
----
-
-**Última actualización**: 29 de Noviembre de 2025, 00:30 hs  
+**Última actualización**: 30 de Noviembre de 2025, 03:30 hs  
 **Actualizado por**: Antigravity AI (Google Deepmind)
