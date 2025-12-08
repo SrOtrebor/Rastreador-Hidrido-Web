@@ -22,8 +22,8 @@ plugins {
 
 def twaManifest = [
     applicationId: 'com.rastreador.gps',
-    hostName: 'semiacademical-hiedi-weathertight.ngrok-free.dev', // The domain being opened in the TWA.
-    launchUrl: '/', // The start path for the TWA. Must be relative to the domain.
+    hostName: 'srotrebor.github.io', // The domain being opened in the TWA.
+    launchUrl: '/Rastreador-Hibrido-Web/', // The start path for the TWA. Must be relative to the domain.
     name: 'Rastreador GPS Híbrido', // The application name.
     launcherName: 'Rastreador', // The name shown on the Android Launcher.
     themeColor: '#667EEA', // The color used for the status bar.
@@ -76,12 +76,12 @@ android {
             // The URL the Web Manifest for the Progressive Web App that the TWA points to. This
             // is used by Chrome OS and Meta Quest to open the Web version of the PWA instead of
             // the TWA, as it will probably give a better user experience for non-mobile devices.
-            resValue "string", "webManifestUrl", 'https://semiacademical-hiedi-weathertight.ngrok-free.dev/manifest.json'
+            resValue "string", "webManifestUrl", 'https://srotrebor.github.io/Rastreador-Hibrido-Web/manifest.json'
         
 
         
             // This is used by Meta Quest.
-            resValue "string", "fullScopeUrl", 'https://semiacademical-hiedi-weathertight.ngrok-free.dev/'
+            resValue "string", "fullScopeUrl", 'https://srotrebor.github.io/Rastreador-Hibrido-Web/'
         
 
         
@@ -213,3 +213,7 @@ dependencies {
         implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.6.2'
     
 }
+
+
+
+

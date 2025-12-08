@@ -1,0 +1,14 @@
+[
+    {
+        "relation": [
+            "delegate_permission/common.handle_all_urls"
+        ],
+        "target": {
+            "namespace": "android_app",
+            "package_name": "com.rastreador.gps",
+            "sha256_cert_fingerprints": [
+                "F8:AF:2E:D9:93:44:93:CE:B3:19:81:E4:16:E5:93:CF:A9:B0:5B:B3:FC:4D:60:45:BB:B2:56:0F:34:08:F4:EA:4E"
+            ]
+        }
+    }
+]
